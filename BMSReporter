@@ -1,0 +1,101 @@
+import openpyxl
+from datetime import datetime
+from copy import copy
+
+
+def change_data():
+    # otwarcie pliku
+    file = r'P:\monitorowanie  BMS\monitorowanie BMS.xlsx'
+    wb = openpyxl.load_workbook(filename=file)
+    # wybór arkusza
+    ws = wb[wb.sheetnames[-1]]
+
+
+    #określenie liczby klumn zapełnionych w arkuszu
+    r = 1
+    data = ws.values
+    for i, row in enumerate(data):
+        if i == 3:
+            row = list(row)
+            while row[-1] == None:
+                row.pop(-1)
+            c = len(row)
+            break
+
+    #określenie które komórki trzeba scalić
+    to_merge=[]
+    columns = [c-3, c-2, c-1, c]
+    for merge in ws.merged_cells.ranges:
+        bounds = merge.bounds #(col_low, row_low, col_high, row_high)
+        if (bounds[0] == bounds[2]) and (bounds[0] in columns):
+            to_merge.append(bounds)
+
+    #kopiowanie danych
+    for row in ws.values:
+        #wartości komórek
+        if r == 4:
+            cell1 = ws.cell(r, c + 1, 'Tydzień ' + str(datetime.now().isocalendar()[1]))
+        else:
+            cell1 = ws.cell(r, c + 1, row[-4])
+        cell2 = ws.cell(r, c + 2, row[-3])
+        cell3 = ws.cell(r, c + 3, row[-2])
+        cell4 = ws.cell(r, c + 4, row[-1])
+
+        # style komórek (font, kolorn obramowanie)
+        cell1._style = copy(ws.cell(r, c-3)._style)
+        cell2._style = copy(ws.cell(r, c-2)._style)
+        cell3._style = copy(ws.cell(r, c-1)._style)
+        cell4._style = copy(ws.cell(r, c)._style)
+
+        #Kopieowanie komentarzy
+        if ws.cell(r, c-3).comment:
+            cell1.comment = copy(ws.cell(r, c-3).comment)
+            print(cell1.comment.text, r, c-3)
+        if ws.cell(r, c-2).comment:
+            cell2.comment = copy(ws.cell(r, c-2).comment)
+            print(cell2.comment.text, r, c - 2)
+        if ws.cell(r, c-1).comment:
+            cell3.comment = copy(ws.cell(r, c-1).comment)
+            print(cell3.comment.text, r, c - 1)
+        if ws.cell(r, c).comment:
+            cell4.comment = copy(ws.cell(r, c).comment)
+            print(cell4.comment.text, r, c)
+
+        #scalenie komórek w nagłówku
+        if r == 2:
+            ws.merge_cells(start_row=2, start_column=c+1, end_row=2, end_column=c+4)
+        elif r == 3:
+            ws.merge_cells(start_row=3, start_column=c+2, end_row=3, end_column=c+4)
+        r += 1
+
+    #scalanie
+    if to_merge:
+        for bounds in to_merge:
+            ws.merge_cells(start_row=bounds[1], start_column=bounds[0] + 4, end_row=bounds[3], end_column=bounds[2] + 4)
+
+    #zmiana szerokości nowych kolumn
+    ws.column_dimensions[openpyxl.utils.get_column_letter(c + 1)].width = ws.column_dimensions[
+        openpyxl.utils.get_column_letter(c - 3)].width
+    ws.column_dimensions[openpyxl.utils.get_column_letter(c + 2)].width = ws.column_dimensions[
+        openpyxl.utils.get_column_letter(c - 2)].width
+    ws.column_dimensions[openpyxl.utils.get_column_letter(c + 3)].width = ws.column_dimensions[
+        openpyxl.utils.get_column_letter(c - 1)].width
+    ws.column_dimensions[openpyxl.utils.get_column_letter(c + 4)].width = ws.column_dimensions[
+        openpyxl.utils.get_column_letter(c)].width
+
+    # GRUPOWANIE
+    ws.column_dimensions.group(openpyxl.utils.get_column_letter(c + 2),
+                              openpyxl.utils.get_column_letter(c + 4), hidden=True)
+
+    #zapis zmian
+    wb.save(file)
+
+def main():
+    change_data()
+    print('Success')
+    while True:
+        pass
+
+if __name__ == '__main__':
+    main()
+
